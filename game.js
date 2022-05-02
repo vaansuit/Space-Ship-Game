@@ -147,6 +147,9 @@ class Grid {
 
         const columns = Math.floor(Math.random() * 10 + 5) // faz com que o minimo de colunas de inimigos seja 5 e o máximo 15
         const rows = Math.floor(Math.random() * 8 + 4)  // faz com que o minimo de linhas de inimigos seja 4 e o máximo 12
+        
+        this.width = columns * 30 //setando a caixa de colisão para o bounce
+        
         for (let x = 0; x < columns; x++) {
             for (let y = 0; y < rows; y++) {
                 this.invaders.push(
@@ -167,6 +170,10 @@ class Grid {
     update() {
         this.position.x += this.velocity.x
         this.position.y =+ this.velocity.y
+
+        if (this.position.x + this.width >= canvas.width || this.position.x <= 0) {
+            this.velocity.x = -this.velocity.x
+        } //bounce da direira para esquerda
     }
 }
 
