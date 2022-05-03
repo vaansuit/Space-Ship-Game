@@ -90,6 +90,33 @@ class Projectile {
     
 } 
 
+//adicionando particulas para deixar o jogo mais bonitinho
+class Particles {
+    constructor ({position, velocity, radius, color}) {
+        this.position = position
+        this.velocity = velocity
+
+        this.radius = radius
+        this.color = color
+    }
+
+    
+    draw(){
+        c.beginPath() 
+        c.arc(this.position.x, this.position.y, this.radius, 0, Math.PI * 2)
+        c.fillStyle = this.color
+        c.fill()
+        c.closePath() 
+    }
+
+    update(){
+        this.draw()
+        this.position.x += this.velocity.x
+        this.position.y += this.velocity.y
+    }
+    
+} 
+
 class InvaderProjectile {
     constructor ({position, velocity}) {
         this.position = position
@@ -227,6 +254,8 @@ const grids = []
 
 const invaderProjectiles = []
 
+const particles = []
+
 const keys = {
     left: {
         pressed: false
@@ -249,6 +278,10 @@ function animate() {
     c.fillStyle = 'black' //setando a cor do universo
     c.fillRect (0, 0, canvas.width, canvas.height) //setando as medidas do bg
     player.update()
+
+    particles.forEach(particle => {
+        particle.update()
+    })
 
     invaderProjectiles.forEach((invaderProjectile, index) => {
         if (invaderProjectile.position.y + invaderProjectile.height 
@@ -286,7 +319,7 @@ function animate() {
         }
     })
 
-    grids.forEach((grid) => {
+    grids.forEach((grid, gridIndex) => {
         grid.update()
 
         //atirando contra o jogador
@@ -309,6 +342,22 @@ function animate() {
                     projectile.position.y + projectile.radius >= 
                     invader.position.y
                 ) {
+                    for (let i = 0; i < 15; i++){
+                    particles.push(
+                        new Particles ({
+                            position: {
+                                x: invader.position.x + invader.width / 2, 
+                                y: invader.position.y + invader.height / 2
+                            },
+                            velocity: {
+                                x: Math.random() - 0.5,
+                                y: Math.random() - 0.5
+                            },
+                            radius: 3,
+                            color: 'yellow'
+                        })
+                    )}
+
                     setTimeout(() => {
 
                         const invaderFound = grid.invaders.find(
@@ -322,6 +371,17 @@ function animate() {
                         if (invaderFound && projectileFound){
                             grid.invaders.splice(i, 1)
                             projectiles.splice(j, 1)
+
+                            if (grid.invaders.length > 0) {
+                                const firstInvader = grid.invaders[0]
+                                const lastInvader = grid.invaders[grid.invaders.length - 1]
+
+                                grid.width = lastInvader.position.x - firstInvader.position.x + lastInvader.width
+
+                                grid.position.x = firstInvader.position.x
+                            } else {
+                                grid.splice(gridIndex, 1)
+                            }
                         }
                     }, 0)
                 }
