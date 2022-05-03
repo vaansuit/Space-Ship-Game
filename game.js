@@ -90,6 +90,29 @@ class Projectile {
     
 } 
 
+class InvaderProjectile {
+    constructor ({position, velocity}) {
+        this.position = position
+        this.velocity = velocity
+
+       this.width = 3
+       this.height = 10
+    }
+
+    //desenhando a bala
+    draw(){
+        c.fillStyle = 'red'
+        c.fillRect(this.position.x, this.position.y, this.width, this.height)
+    }
+
+    update(){
+        this.draw()
+        this.position.x += this.velocity.x
+        this.position.y += this.velocity.y
+    }
+    
+}
+
 // criando nosso inimigo
 class Invader {
     constructor({position}) {
@@ -128,6 +151,22 @@ class Invader {
                 this.position.y += velocity.y
             }
         }
+
+    shoot(invaderProjectiles){
+        invaderProjectiles.push(
+            new InvaderProjectile({
+                position: {
+                    x: this.position.x + this.width / 2,
+                    y: this.position.y + this.height
+                }, 
+                velocity: {
+                    x: 0,
+                    y: 5
+                }
+            })
+        )
+
+    }
 }
 
 //criando as linhas e colunas de inimigos
@@ -171,9 +210,12 @@ class Grid {
         this.position.x += this.velocity.x
         this.position.y =+ this.velocity.y
 
+        this.velocity.y = 0 //velocidade do eixo y
+
         if (this.position.x + this.width >= canvas.width || this.position.x <= 0) {
-            this.velocity.x = -this.velocity.x
-        } //bounce da direira para esquerda
+            this.velocity.x = -this.velocity.x //bounce da direira para esquerda
+            this.velocity.y = 30 //descendo 1 inimigo toda vez que der bounce
+        } 
     }
 }
 
@@ -181,7 +223,9 @@ const player = new Player();
 
 const projectiles = [] //iniciando com zero projeteis disparados
 
-const grids = [new Grid()]
+const grids = []
+
+const invaderProjectiles = []
 
 const keys = {
     left: {
@@ -195,6 +239,9 @@ const keys = {
     }
 }
 
+let frames = 0
+let randomIntervals = Math.floor(Math.random() * 500 + 500) //utilizado Math.floor para trazer numeros inteiros
+
 player.update();
 
 function animate() {
@@ -202,6 +249,31 @@ function animate() {
     c.fillStyle = 'black' //setando a cor do universo
     c.fillRect (0, 0, canvas.width, canvas.height) //setando as medidas do bg
     player.update()
+
+    invaderProjectiles.forEach((invaderProjectile, index) => {
+        if (invaderProjectile.position.y + invaderProjectile.height 
+            >=
+            canvas.height
+            ) {
+                setTimeout(() => {
+                    invaderProjectiles.splice(index, 1)
+                }, 0)
+            } else invaderProjectile.update()
+
+            //caixa de colisão do player
+            if (
+                invaderProjectile.position.y + invaderProjectile.height
+                >=
+                player.position.y &&
+                invaderProjectile.position.x + invaderProjectile.width
+                >=
+                player.position.x &&
+                invaderProjectile.position.x <= player.position.x + player.width
+            ) {
+                console.log('perdeu')
+            }
+
+    })
     
     projectiles.forEach((projectile, index) => {
         
@@ -216,8 +288,45 @@ function animate() {
 
     grids.forEach((grid) => {
         grid.update()
-        grid.invaders.forEach((invader =>
-            invader.update({velocity: grid.velocity})))
+
+        //atirando contra o jogador
+        if (frames % 100 === 0 && grid.invaders.length > 0) {
+            grid.invaders[Math.floor(Math.random() * grid.invaders.length)].shoot(
+            invaderProjectiles
+            )}
+        
+        grid.invaders.forEach((invader, i) => {
+            invader.update({velocity: grid.velocity})
+            //hardcode brabo da caixa de colisão dos inimigos e das balas, em resumo um monte de calculo pra saber onde começa o projetil e onde começa o inimigo
+            projectiles.forEach((projectile, j) => {
+                if (
+                    projectile.position.y - projectile.radius <= 
+                    invader.position.y + invader.height && 
+                    projectile.position.x + projectile.radius >=
+                    invader.position.x && 
+                    projectile.position.x - projectile.radius <=
+                    invader.position.x + invader.width && 
+                    projectile.position.y + projectile.radius >= 
+                    invader.position.y
+                ) {
+                    setTimeout(() => {
+
+                        const invaderFound = grid.invaders.find(
+                            (invader2) => invader2 === invader
+                        ) 
+
+                        const projectileFound = projectiles.find(
+                            (projectile2) => projectile2 === projectile
+                        )
+
+                        if (invaderFound && projectileFound){
+                            grid.invaders.splice(i, 1)
+                            projectiles.splice(j, 1)
+                        }
+                    }, 0)
+                }
+            })
+        })
     })
 
     if (keys.left.pressed && player.position.x>= 0) {
@@ -231,6 +340,14 @@ function animate() {
         player.velocity.x = 0
         player.rotation = 0
     } 
+
+    //spawnando os inimigos entre intervalos aleatorios
+    if (frames % randomIntervals === 0) {
+        grids.push(new Grid())
+        Math.floor(Math.random() * 500 + 500)
+    }
+
+    frames++ //1 loop de animação
 }
 
 animate()
