@@ -1,4 +1,5 @@
 const canvas = document.querySelector('canvas');
+const scoreEl = document.querySelector('#scoreEL'); //selecionando a pontuação
 const c = canvas.getContext('2d'); // setando o contexto do js para 2d
 
 canvas.width = window.innerWidth; // setando as propriedades de altura e largura
@@ -13,6 +14,7 @@ class Player {
         }
 
         this.rotation = 0;
+        this.opacity = 1
 
         const image = new Image();
         image.src='./img/spaceship.png'
@@ -32,6 +34,7 @@ class Player {
         /*c.fillStyle = 'red'
         c.fillRect(this.position.x, this.position.y, this.width, this.height)*/ //usado para desenhar um quadrado e ver onde o player se encontra
         c.save()
+        c.globalAlpha = this.opacity
         c.translate(
             player.position.x + player.width / 2, 
             player.position.y + player.height /2 
@@ -92,13 +95,14 @@ class Projectile {
 
 //adicionando particulas para deixar o jogo mais bonitinho
 class Particles {
-    constructor ({position, velocity, radius, color}) {
+    constructor ({position, velocity, radius, color, fades}) {
         this.position = position
         this.velocity = velocity
 
         this.radius = radius
         this.color = color
         this.opacity = 1
+        this.fades = fades
     }
 
     
@@ -118,6 +122,7 @@ class Particles {
         this.position.x += this.velocity.x
         this.position.y += this.velocity.y
 
+        if (this.fades)
         this.opacity -= 0.01
     }
     
@@ -276,16 +281,68 @@ const keys = {
 
 let frames = 0
 let randomIntervals = Math.floor(Math.random() * 500 + 500) //utilizado Math.floor para trazer numeros inteiros
+let game = {
+    over: false,
+    active: true
+}
+let score = 0
+
+
+
+//estrelas no background
+for (let i = 0; i < 100; i++){
+    particles.push(
+        new Particles ({
+            position: {
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height
+            },
+            velocity: {
+                x: 0,
+                y: 1
+            },
+            radius: Math.random() * 3,
+            color: 'white'
+        })
+    )}
+
+//função que cria as particulas de colisão
+function createParticles({object, color, fades}) {
+    for (let i = 0; i < 15; i++){
+        particles.push(
+            new Particles ({
+                position: {
+                    x: object.position.x + object.width / 2, 
+                    y: object.position.y + object.height / 2
+                },
+                velocity: {
+                    x: (Math.random() - 0.5) * 2,
+                    y: (Math.random() - 0.5) * 2
+                },
+                radius: Math.random() * 3,
+                color: color,
+                fades 
+            })
+        )}
+}
 
 player.update();
 
 function animate() {
+    if(!game.active) return
     requestAnimationFrame(animate) //looping da nossa nave
     c.fillStyle = 'black' //setando a cor do universo
     c.fillRect (0, 0, canvas.width, canvas.height) //setando as medidas do bg
     player.update()
 
     particles.forEach((particle, i) => {
+
+        //criando o roll das estrelas 
+        if (particle.position.y - particle.radius >= canvas.height) {
+            particle.position.x = Math.random() * canvas.width
+            particle.position.y = -particle.radius
+        }
+
         if (particle.opacity <= 0) {
             setTimeout(() => {
                 particles.splice(i, 1)
@@ -318,7 +375,26 @@ function animate() {
                 player.position.x &&
                 invaderProjectile.position.x <= player.position.x + player.width
             ) {
-                console.log('perdeu')
+                //fazendo a bala sumir quando atingir o jogador
+                setTimeout(() => {
+                    invaderProjectiles.splice(index, 1)
+                    player.opacity = 0 //removendo o player quando for atingido
+                    game.over = true //terminando o game
+                }, 0)
+
+
+                //deixando a animação rodar por 2 segundos apos o jogador perder
+                setTimeout(() => {
+                    game.active = false
+                }, 2000)
+               
+                // console.log('perdeu')
+                createParticles ({
+                    object: player,
+                    color: 'white',
+                    fades: true
+                })
+
             }
 
     })
@@ -368,21 +444,13 @@ function animate() {
                         )
 
                         if (invaderFound && projectileFound){
-                            for (let i = 0; i < 15; i++){
-                                particles.push(
-                                    new Particles ({
-                                        position: {
-                                            x: invader.position.x + invader.width / 2, 
-                                            y: invader.position.y + invader.height / 2
-                                        },
-                                        velocity: {
-                                            x: (Math.random() - 0.5) * 2,
-                                            y: (Math.random() - 0.5) * 2
-                                        },
-                                        radius: Math.random() * 3,
-                                        color: 'yellow'
-                                    })
-                                )}
+                            score += 100 //adicionando pontuação quando destroi um inimigo
+                            scoreEl.innerHTML = score
+                            createParticles ({
+                                object: invader,
+                                color: 'purple',
+                                fades:true
+                            })
                             grid.invaders.splice(i, 1)
                             projectiles.splice(j, 1)
 
@@ -427,6 +495,9 @@ function animate() {
 animate()
 
 addEventListener('keydown', ({key}) => {
+
+    if(game.over) return
+
     switch (key) {
         case 'ArrowLeft':
             player.velocity.x = -7
