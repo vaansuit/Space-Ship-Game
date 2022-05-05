@@ -448,7 +448,7 @@ function animate() {
                             scoreEl.innerHTML = score
                             createParticles ({
                                 object: invader,
-                                color: 'purple',
+                                color: '#013220',
                                 fades:true
                             })
                             grid.invaders.splice(i, 1)
